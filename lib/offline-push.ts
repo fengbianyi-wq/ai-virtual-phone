@@ -8,7 +8,7 @@ import { addChatContact, createOrGetSession, loadChatContacts, pushChatMessage }
 export const OFFLINE_PUSH_CONFIG = {
   serverUrl: "https://float-amsg-server.2415408770.workers.dev",
   serverToken: "2a29c416256583bbce7b55863d1537a18800fd117245ee48",
-  userId: "single",
+  userId: "7f4d2c9e-6b8a-4f3e-9c1d-2a5b8e0f4d6c",
 };
 
 export type OfflinePushContent = {
