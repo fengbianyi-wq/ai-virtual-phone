@@ -120,12 +120,20 @@ export async function initOfflinePush() {
     client = c;
 
     try {
-      const registration = await navigator.serviceWorker.ready;
+      const readyTimeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("serviceWorker 就绪超时(12s)")), 12000)
+      );
+      const registration = await Promise.race([navigator.serviceWorker.ready, readyTimeout]);
       const vapidPublicKey = await c.getVapidPublicKey();
       const subscription = await c.subscribePush(vapidPublicKey, registration);
-      await c.putPushSubscription(subscription).catch(() => {});
+      const putRes = await c.putPushSubscription(subscription);
+      if (!putRes?.success) {
+        alert("离线推送登记失败：" + (putRes?.error?.message || JSON.stringify(putRes)));
+      }
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
       console.warn("[offline-push] 推送订阅失败:", err);
+      alert("离线推送订阅失败：" + msg);
     }
 
     navigator.serviceWorker.addEventListener("message", ((e: MessageEvent) => {
@@ -142,7 +150,9 @@ export async function initOfflinePush() {
 
     await drainOutbox(c);
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
     console.warn("[offline-push] 初始化失败:", err);
+    alert("离线推送初始化失败：" + msg);
   }
 }
 
