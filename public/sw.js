@@ -1565,7 +1565,7 @@ async function removeQueuedRequest(id) {
 }
 
 // scripts/rei-sw-src.mjs
-var CACHE_VERSION = "ai-phone-pwa-v5";
+var CACHE_VERSION = "ai-phone-pwa-v6";
 var STATIC_CACHE = `${CACHE_VERSION}-static`;
 var RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 var PRECACHE_URLS = ["/", "/manifest.json", "/icon-192.png", "/icon-512.png"];
