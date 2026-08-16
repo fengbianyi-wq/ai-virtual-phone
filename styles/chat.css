@@ -1023,12 +1023,30 @@
 }
 
 /* ── Context menu ── */
+.ctx-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 75;
+  background: rgba(0, 0, 0, 0.35);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  animation: ctx-menu-fade-in 0.16s ease;
+}
+@keyframes ctx-menu-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 .ctx-menu {
   background: var(--ctx-menu-bg, #2c2c2c);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35);
   z-index: 50;
   white-space: nowrap;
+  animation: ctx-menu-pop 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes ctx-menu-pop {
+  from { opacity: 0; transform: scale(0.94) translateY(4px); }
+  to { opacity: 1; transform: none; }
 }
 .chat-floating-ctx-menu {
   position: fixed;
@@ -1059,6 +1077,13 @@
   padding: 0 12px;
   font-size: calc(12.6px*var(--app-text-scale,1));
   cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.ctx-menu-btn:active {
+  background: rgba(255,255,255,0.12);
+  transform: scale(0.96);
 }
 .ctx-menu-btn-danger {
   color: var(--c-danger);
