@@ -5,6 +5,7 @@ import { ArrowRight } from "lucide-react";
 
 import { AccountGate } from "@/components/auth/account-gate";
 import { CloudBackupScheduler } from "@/components/cloud-backup-scheduler";
+import { OfflinePushRegistrar } from "@/components/offline-push-registrar";
 import { MediaMaintenanceScheduler } from "@/components/media-maintenance-scheduler";
 import { DesktopShell } from "./desktop-shell";
 import { SplashAnimation } from "./splash-animation";
@@ -287,9 +288,11 @@ export function MainApp() {
             />
             <CloudBackupScheduler />
             <MediaMaintenanceScheduler />
+              <OfflinePushRegistrar />
           </MusicProvider>
         </main>
       )}
     </AccountGate>
   );
 }
+
