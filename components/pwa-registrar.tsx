@@ -10,7 +10,7 @@ export function PWARegistrar() {
     let cancelled = false;
     const register = () => {
       if (cancelled) return;
-      navigator.serviceWorker.register("/sw.js", { scope: "/", type: "module" }).catch((error) => {
+      navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch((error) => {
         console.warn("[PWA] Service worker registration failed:", error);
       });
     };
