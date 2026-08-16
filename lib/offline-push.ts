@@ -2,8 +2,9 @@
 
 import { ReiClient } from "@rei-standard/amsg-client";
 import { REI_AMSG_POSTMESSAGE_TYPE, REI_SW_EVENT } from "@rei-standard/amsg-shared";
+import { loadCharacters } from "@/lib/character-storage";
+import { addChatContact, createOrGetSession, loadChatContacts, pushChatMessage } from "@/lib/chat-storage";
 
-// 离线推送服务器配置（单用户）
 export const OFFLINE_PUSH_CONFIG = {
   serverUrl: "https://float-amsg-server.2415408770.workers.dev",
   serverToken: "2a29c416256583bbce7b55863d1537a18800fd117245ee48",
@@ -42,6 +43,46 @@ function toContent(payload: any): OfflinePushContent | null {
   };
 }
 
+/** 把收到的离线消息写进对应角色的聊天会话。 */
+export function routeOfflineMessage(content: OfflinePushContent): boolean {
+  if (!content.message?.trim()) return false;
+  try {
+    const chars: any[] = loadCharacters();
+    const target = chars.find((c) => c.name === content.contactName || c.name === content.title);
+    if (!target) return false;
+    const contacts: any[] = loadChatContacts();
+    let contact = contacts.find((c) => c.characterId === target.id);
+    if (!contact) contact = addChatContact(target.id);
+    if (!contact) return false;
+    const session = createOrGetSession(contact.id);
+    pushChatMessage({ sessionId: session.id, role: "assistant", content: content.message, status: "sent" });
+    window.dispatchEvent(new CustomEvent("chat-message-pushed", { detail: { sessionId: session.id } }));
+    return true;
+  } catch (err) {
+    console.warn("[offline-push] 写入聊天失败:", err);
+    return false;
+  }
+}
+
+/** 排一个固定文案的离线消息（无需 LLM，可用于测试推送链路）。 */
+export async function scheduleOfflineMessage(opts: { contactName: string; text: string; delayMs?: number }): Promise<boolean> {
+  const c = getOfflinePushClient();
+  if (!c) return false;
+  try {
+    await c.scheduleMessage({
+      contactName: opts.contactName,
+      messageType: "fixed",
+      userMessage: opts.text,
+      firstSendTime: new Date(Date.now() + (opts.delayMs ?? 60000)).toISOString(),
+      recurrenceType: "none",
+    });
+    return true;
+  } catch (err) {
+    console.warn("[offline-push] 排任务失败:", err);
+    return false;
+  }
+}
+
 async function drainOutbox(c: ReiClient) {
   try {
     let since: number | undefined;
@@ -50,7 +91,10 @@ async function drainOutbox(c: ReiClient) {
       const entries = Array.isArray(page?.entries) ? page.entries : [];
       for (const entry of entries) {
         const content = toContent(entry?.push ?? entry);
-        if (content) handler?.(content);
+        if (content) {
+          const routed = routeOfflineMessage(content);
+          if (!routed) handler?.(content);
+        }
       }
       if (entries.length > 0) {
         const ids = entries.map((e: any) => e.messageId).filter(Boolean);
@@ -75,7 +119,6 @@ export async function initOfflinePush() {
     await c.init();
     client = c;
 
-    // 订阅 Web Push
     try {
       const registration = await navigator.serviceWorker.ready;
       const vapidPublicKey = await c.getVapidPublicKey();
@@ -85,17 +128,18 @@ export async function initOfflinePush() {
       console.warn("[offline-push] 推送订阅失败:", err);
     }
 
-    // 监听 SW 广播（页面存活时实时收到）
     navigator.serviceWorker.addEventListener("message", ((e: MessageEvent) => {
       const data: any = e.data;
       if (!data || data.type !== REI_AMSG_POSTMESSAGE_TYPE) return;
       if (data.event === REI_SW_EVENT.CONTENT_RECEIVED || data.event === REI_SW_EVENT.UNKNOWN_RECEIVED || data.event === REI_SW_EVENT.RESULT_RECEIVED) {
         const content = toContent(data.payload ?? data);
-        if (content) handler?.(content);
+        if (content) {
+          const routed = routeOfflineMessage(content);
+          if (!routed) handler?.(content);
+        }
       }
     }) as EventListener);
 
-    // 上线补一次收件箱
     await drainOutbox(c);
   } catch (err) {
     console.warn("[offline-push] 初始化失败:", err);
