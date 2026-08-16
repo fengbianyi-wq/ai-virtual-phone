@@ -1287,6 +1287,7 @@ export function ChatRoom({ session, onBack }: ChatRoomProps) {
     const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
     const startPosRef = useRef<{ x: number, y: number } | null>(null);
     const longPressTriggeredRef = useRef(false);
+    const swipeQuoteRef = useRef<{ msgId: string; startX: number; startY: number } | null>(null);
 
     const scrollRef = useRef<HTMLDivElement>(null);
     const mountedRef = useRef(true);
@@ -3844,6 +3845,7 @@ export function ChatRoom({ session, onBack }: ChatRoomProps) {
         e.preventDefault();
         const anchor = { x: e.clientX, y: e.clientY };
         startPosRef.current = anchor;
+        swipeQuoteRef.current = null;
         longPressTriggeredRef.current = false;
         if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
         longPressTimerRef.current = setTimeout(() => {
@@ -4437,6 +4439,7 @@ export function ChatRoom({ session, onBack }: ChatRoomProps) {
 
         const anchor = { x: e.clientX, y: e.clientY };
         startPosRef.current = anchor;
+        swipeQuoteRef.current = { msgId, startX: anchor.x, startY: anchor.y };
         longPressTriggeredRef.current = false;
 
         if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
@@ -4453,6 +4456,17 @@ export function ChatRoom({ session, onBack }: ChatRoomProps) {
             clearTimeout(longPressTimerRef.current);
             longPressTimerRef.current = null;
         }
+        // 右滑消息直接引用
+        const swipe = swipeQuoteRef.current;
+        if (swipe && !longPressTriggeredRef.current) {
+            const dx = e.clientX - swipe.startX;
+            const dy = Math.abs(e.clientY - swipe.startY);
+            if (dx > 56 && dy < 60) {
+                const target = displayMessages.find(m => m.id === swipe.msgId);
+                if (target) setQuotingMessage(target);
+            }
+        }
+        swipeQuoteRef.current = null;
         // If a long press just triggered, stop the event from becoming a click
         if (longPressTriggeredRef.current) {
             e.stopPropagation();
@@ -4548,10 +4562,12 @@ export function ChatRoom({ session, onBack }: ChatRoomProps) {
 
     const renderOfflineContextMenu = (turn: ChatOfflineTurn, role: OfflineActionTarget["role"]) => {
         const menu = (
-            <div
-                onPointerDown={e => e.stopPropagation()}
-                ref={positionFloatingContextMenu}
-                style={getContextMenuInitialStyle()}
+            <>
+                <div className="ctx-menu-backdrop" onPointerDown={(e) => { e.stopPropagation(); closeContextMenu(); }} />
+                <div
+                    onPointerDown={e => e.stopPropagation()}
+                    ref={positionFloatingContextMenu}
+                    style={getContextMenuInitialStyle()}
                 className="ctx-menu chat-floating-ctx-menu flex flex-col items-center gap-[6px] py-[4px] px-0"
                 data-role={role}
             >
@@ -4566,6 +4582,7 @@ export function ChatRoom({ session, onBack }: ChatRoomProps) {
                 </div>
                 <div data-menu-triangle className="ctx-menu-triangle absolute -top-[6px] w-0 h-0" />
             </div>
+            </>
         );
         return wrapperRef.current ? createPortal(menu, wrapperRef.current) : menu;
     };
@@ -4573,10 +4590,12 @@ export function ChatRoom({ session, onBack }: ChatRoomProps) {
     /** Reusable context menu for user/assistant bubbles */
     const renderBubbleContextMenu = (m: ChatMessage, options?: { allowMultiSelect?: boolean }) => {
         const menu = (
-            <div
-                onPointerDown={e => e.stopPropagation()}
-                ref={positionFloatingContextMenu}
-                style={getContextMenuInitialStyle()}
+            <>
+                <div className="ctx-menu-backdrop" onPointerDown={(e) => { e.stopPropagation(); closeContextMenu(); }} />
+                <div
+                    onPointerDown={e => e.stopPropagation()}
+                    ref={positionFloatingContextMenu}
+                    style={getContextMenuInitialStyle()}
                 className="ctx-menu chat-floating-ctx-menu flex flex-col items-center gap-[6px] py-[4px] px-0"
                 data-role={m.role}>
                 <div className="flex">
@@ -4641,16 +4660,19 @@ export function ChatRoom({ session, onBack }: ChatRoomProps) {
                 })()}
                 <div data-menu-triangle className="ctx-menu-triangle absolute -top-[6px] w-0 h-0" />
             </div>
+            </>
         );
         return wrapperRef.current ? createPortal(menu, wrapperRef.current) : menu;
     };
 
     const renderDeleteOnlyContextMenu = (onDelete: () => void, onMultiSelect?: () => void) => {
         const menu = (
-            <div
-                onPointerDown={e => e.stopPropagation()}
-                ref={positionFloatingContextMenu}
-                style={getContextMenuInitialStyle()}
+            <>
+                <div className="ctx-menu-backdrop" onPointerDown={(e) => { e.stopPropagation(); closeContextMenu(); }} />
+                <div
+                    onPointerDown={e => e.stopPropagation()}
+                    ref={positionFloatingContextMenu}
+                    style={getContextMenuInitialStyle()}
                 className="ctx-menu chat-floating-ctx-menu flex py-[6px] px-0"
             >
                 {onMultiSelect && (
@@ -4672,6 +4694,7 @@ export function ChatRoom({ session, onBack }: ChatRoomProps) {
                 >删除</button>
                 <div data-menu-triangle className="ctx-menu-triangle absolute -top-[6px] w-0 h-0" />
             </div>
+            </>
         );
         return wrapperRef.current ? createPortal(menu, wrapperRef.current) : menu;
     };
@@ -4712,10 +4735,12 @@ export function ChatRoom({ session, onBack }: ChatRoomProps) {
         }
 
         const menu = (
-            <div
-                onPointerDown={e => e.stopPropagation()}
-                ref={positionFloatingContextMenu}
-                style={getContextMenuInitialStyle()}
+            <>
+                <div className="ctx-menu-backdrop" onPointerDown={(e) => { e.stopPropagation(); closeContextMenu(); }} />
+                <div
+                    onPointerDown={e => e.stopPropagation()}
+                    ref={positionFloatingContextMenu}
+                    style={getContextMenuInitialStyle()}
                 className="ctx-menu chat-floating-ctx-menu flex py-[6px] px-0"
             >
                 <button
@@ -4751,6 +4776,7 @@ export function ChatRoom({ session, onBack }: ChatRoomProps) {
                 >删除</button>
                 <div data-menu-triangle className="ctx-menu-triangle absolute -top-[6px] w-0 h-0" />
             </div>
+            </>
         );
         return wrapperRef.current ? createPortal(menu, wrapperRef.current) : menu;
     };
